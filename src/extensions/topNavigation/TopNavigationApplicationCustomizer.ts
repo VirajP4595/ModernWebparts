@@ -1,39 +1,57 @@
-import { Log } from '@microsoft/sp-core-library';
+import * as React from "react";
+import * as ReactDom from "react-dom";
+import { override } from "@microsoft/decorators";
+import { Log } from "@microsoft/sp-core-library";
 import {
-  BaseApplicationCustomizer
-} from '@microsoft/sp-application-base';
-import { Dialog } from '@microsoft/sp-dialog';
+  BaseApplicationCustomizer,
+  PlaceholderContent,
+  PlaceholderName
+} from "@microsoft/sp-application-base";
+import GlobalNav from "./components/GlobalNav";
+//import * as strings from "SpfxGlobalNavigationApplicationCustomizerStrings";
 
-import * as strings from 'TopNavigationApplicationCustomizerStrings';
+const LOG_SOURCE: string = "SpfxGlobalNavigationApplicationCustomizer";
 
-const LOG_SOURCE: string = 'TopNavigationApplicationCustomizer';
+export interface ISpfxGlobalNavigationApplicationCustomizerProperties { }
 
-/**
- * If your command set uses the ClientSideComponentProperties JSON input,
- * it will be deserialized into the BaseExtension.properties object.
- * You can define an interface to describe it.
- */
-export interface ITopNavigationApplicationCustomizerProperties {
-  // This is an example; replace with your own property
-  testMessage: string;
-}
+export default class SpfxGlobalNavigationApplicationCustomizer extends BaseApplicationCustomizer<
+  ISpfxGlobalNavigationApplicationCustomizerProperties
+> {
+  private topPlaceholder: PlaceholderContent | undefined;
 
-/** A Custom Action which can be run during execution of a Client Side Application */
-export default class TopNavigationApplicationCustomizer
-  extends BaseApplicationCustomizer<ITopNavigationApplicationCustomizerProperties> {
-
+  @override
   public onInit(): Promise<void> {
-    Log.info(LOG_SOURCE, `Initialized ${strings.Title}`);
+    Log.info(LOG_SOURCE, `Initialized SpfxGlobalNavigationApplicationCustomizer`);
 
-    let message: string = this.properties.testMessage;
-    if (!message) {
-      message = '(No properties were provided.)';
-    }
 
-    Dialog.alert(`Hello from ${strings.Title}:\n\n${message}`).catch(() => {
-      /* handle error */
-    });
+    this.context.placeholderProvider.changedEvent.add(
+      this,
+      this.renderPlaceHolders
+    );
 
     return Promise.resolve();
+  }
+
+  private renderPlaceHolders(): void {
+    if (!this.topPlaceholder) {
+      this.topPlaceholder = this.context.placeholderProvider.tryCreateContent(
+        PlaceholderName.Top
+      );
+
+      if (!this.topPlaceholder) {
+        return;
+      }
+
+      if (this.topPlaceholder.domElement) {
+        const element: React.ReactElement<{}> = React.createElement(
+          GlobalNav,
+          {
+            context: this.context,
+            siteUrl: this.context.pageContext.web.absoluteUrl,
+          }
+        );
+        ReactDom.render(element, this.topPlaceholder.domElement);
+      }
+    }
   }
 }
